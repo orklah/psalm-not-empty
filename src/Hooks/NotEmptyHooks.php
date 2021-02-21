@@ -94,7 +94,7 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
             $startPos = $original_expr->getStartFilePos();
             $endPos = $original_expr->getEndFilePos()+1;
             $file_manipulation = new FileManipulation($startPos, $endPos, $replacement);
-            $event->addFileReplacements([$file_manipulation]);
+            $event->setFileReplacements([$file_manipulation]);
         }
 
         return true;
