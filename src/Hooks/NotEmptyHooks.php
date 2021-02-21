@@ -26,7 +26,7 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
             return true;
         }
 
-        if ($expr->expr instanceof Variable) {
+        if (!$expr->expr instanceof Variable) {
             return true;
         }
 
