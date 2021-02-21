@@ -2,6 +2,7 @@
 
 namespace Orklah\NotEmpty\Hooks;
 
+use PhpParser\Node\Expr\BooleanNot;
 use PhpParser\Node\Expr\Empty_;
 use PhpParser\Node\Expr\Variable;
 use Psalm\FileManipulation;
@@ -19,10 +20,23 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
             return true;
         }
 
-        $expr = $event->getExpr();
-        $node_provider = $event->getStatementsSource()->getNodeTypeProvider();
+        $original_expr = $event->getExpr();
 
-        if (!$expr instanceof Empty_) {
+        $node_provider = $event->getStatementsSource()->getNodeTypeProvider();
+        $comparison_operator = '===';
+        $combination_operator = '||';
+
+        if($original_expr instanceof BooleanNot && $original_expr->expr instanceof Empty_){
+            $comparison_operator = '!==';
+            $combination_operator = '&&';
+            $expr = $original_expr->expr;
+        } elseif ($original_expr instanceof Empty_) {
+            if($event->getContext()->inside_negation){
+                //we're inside a negation. If we start messing with replacements now, we won't be able to handle the negation then
+                return true;
+            }
+            $expr = $original_expr;
+        } else {
             return true;
         }
 
@@ -51,19 +65,25 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
 
         $replacement = null;
         if ($atomic_type instanceof Atomic\TInt) {
-            $replacement = $display_expr . " === 0";
+            $replacement = $display_expr . ' ' . $comparison_operator . ' ' . '0';
         } elseif ($atomic_type instanceof Atomic\TFloat) {
-            $replacement = $display_expr . " === 0.0";
+            $replacement = $display_expr . ' ' . $comparison_operator . ' ' . '0.0';
         } elseif ($atomic_type instanceof Atomic\TString) {
-            $replacement = $display_expr . " === '' || " . $display_expr . " === '0'";
+            $replacement = '(';
+            $replacement .= $display_expr . ' ' . $comparison_operator . ' ' . "''";
+            $replacement .= ' ' . $combination_operator . ' ';
+            $replacement .= $display_expr . ' ' . $comparison_operator . ' ' . "'0'";
+            $replacement .= ')';
         } elseif ($atomic_type instanceof Atomic\TArray
             || $atomic_type instanceof Atomic\TList
             || $atomic_type instanceof Atomic\TKeyedArray
         ) {
-            $replacement = $display_expr . " === []";
+            $replacement = $display_expr . ' ' . $comparison_operator . ' ' . '[]';
         } elseif ($atomic_type instanceof Atomic\TBool) {
-            $replacement = $display_expr . " === false";
+            $replacement = $display_expr . ' ' . $comparison_operator . ' ' . 'false';
         } else {
+            // object, named objects could be replaced by false(or true if !empty)
+            // null could be replace by true (or false if !empty)
             if(!$atomic_type instanceof Atomic\TMixed) {
                 var_dump(get_class($atomic_type));
                 var_dump($type->getId());
@@ -71,11 +91,10 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
         }
 
         if($replacement !== null){
-            $startPos = $expr->getStartFilePos();
-            $endPos = $expr->getEndFilePos()+1;
-            //TODO: possible improvement: detect !empty and invert conditions to avoid convoluted syntax like if(!(EXPR === 0))
-            $file_manipulation = new FileManipulation($startPos, $endPos, '('.$replacement.')');
-            $event->setFileReplacements([$file_manipulation]);
+            $startPos = $original_expr->getStartFilePos();
+            $endPos = $original_expr->getEndFilePos()+1;
+            $file_manipulation = new FileManipulation($startPos, $endPos, $replacement);
+            $event->addFileReplacements([$file_manipulation]);
         }
 
         return true;
