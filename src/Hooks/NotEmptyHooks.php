@@ -66,12 +66,13 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
         } else {
             if(!$atomic_type instanceof Atomic\TMixed) {
                 var_dump(get_class($atomic_type));
+                var_dump($type->getId());
             }
         }
 
         if($replacement !== null){
             $startPos = $expr->getStartFilePos();
-            $endPos = $expr->getEndFilePos();
+            $endPos = $expr->getEndFilePos()+1;
             //TODO: possible improvement: detect !empty and invert conditions to avoid convoluted syntax like if(!(EXPR === 0))
             $file_manipulation = new FileManipulation($startPos, $endPos, '('.$replacement.')');
             $event->setFileReplacements([$file_manipulation]);
