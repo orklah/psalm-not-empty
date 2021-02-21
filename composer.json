@@ -1,5 +1,5 @@
 {
-    "name": "orklah/psalm-no-empty",
+    "name": "orklah/psalm-not-empty",
     "description": "Automatically change empty() into a more explicit expression",
     "type": "psalm-plugin",
     "minimum-stability": "dev",
