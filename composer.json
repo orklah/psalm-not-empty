@@ -1,0 +1,32 @@
+{
+    "name": "orklah/psalm-no-empty",
+    "description": "Automatically change empty() into a more explicit expression",
+    "type": "psalm-plugin",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "orklah"
+        }
+    ],
+    "extra": {
+        "psalm" : {
+            "pluginClass": "Orklah\\NotEmpty\\Plugin"
+        }
+    },
+    "require": {
+        "php": "^7.3",
+        "vimeo/psalm": "master"
+    },
+    "autoload": {
+        "psr-4": {
+            "Orklah\\NotEmpty\\": ["./src"]
+        }
+    },
+    "require-dev": {
+        "nikic/php-parser": "^4.0",
+        "phpunit/phpunit": "^9.5",
+        "psalm/plugin-phpunit": "^0.15.0"
+    }
+}
