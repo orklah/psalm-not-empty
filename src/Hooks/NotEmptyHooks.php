@@ -9,6 +9,7 @@ use Psalm\FileManipulation;
 use Psalm\Plugin\EventHandler\AfterExpressionAnalysisInterface;
 use Psalm\Plugin\EventHandler\Event\AfterExpressionAnalysisEvent;
 use Psalm\Type\Atomic;
+use function count;
 use function get_class;
 
 
@@ -26,12 +27,12 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
         $comparison_operator = '===';
         $combination_operator = '||';
 
-        if($original_expr instanceof BooleanNot && $original_expr->expr instanceof Empty_){
+        if ($original_expr instanceof BooleanNot && $original_expr->expr instanceof Empty_) {
             $comparison_operator = '!==';
             $combination_operator = '&&';
             $expr = $original_expr->expr;
         } elseif ($original_expr instanceof Empty_) {
-            if($event->getContext()->inside_negation){
+            if ($event->getContext()->inside_negation) {
                 //we're inside a negation. If we start messing with replacements now, we won't be able to handle the negation then
                 return true;
             }
@@ -54,46 +55,50 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
             return true;
         }
 
-        if (!$type->isSingle()) {
-            // TODO: add functionnality with isSingleAndMaybeNullable and add || EXPR === null
-            return true;
+        $display_expr = '$' . $expr->expr->name;
+
+        $replacement = [];
+        if ($type->isSingleAndMaybeNullable() && $type->isNullable()) {
+            $replacement[] = $display_expr . ' ' . $comparison_operator . ' ' . 'null';
+            $type->removeType('null');
         }
 
         $atomic_types = $type->getAtomicTypes();
         $atomic_type = array_shift($atomic_types);
-        $display_expr = '$' .$expr->expr->name;
-
-        $replacement = null;
         if ($atomic_type instanceof Atomic\TInt) {
-            $replacement = $display_expr . ' ' . $comparison_operator . ' ' . '0';
+            $replacement[] = $display_expr . ' ' . $comparison_operator . ' ' . '0';
         } elseif ($atomic_type instanceof Atomic\TFloat) {
-            $replacement = $display_expr . ' ' . $comparison_operator . ' ' . '0.0';
+            $replacement[] = $display_expr . ' ' . $comparison_operator . ' ' . '0.0';
         } elseif ($atomic_type instanceof Atomic\TString) {
-            $replacement = '(';
-            $replacement .= $display_expr . ' ' . $comparison_operator . ' ' . "''";
-            $replacement .= ' ' . $combination_operator . ' ';
-            $replacement .= $display_expr . ' ' . $comparison_operator . ' ' . "'0'";
-            $replacement .= ')';
+            $replacement[] = $display_expr . ' ' . $comparison_operator . ' ' . "''";
+            $replacement[] = $display_expr . ' ' . $comparison_operator . ' ' . "'0'";
         } elseif ($atomic_type instanceof Atomic\TArray
             || $atomic_type instanceof Atomic\TList
             || $atomic_type instanceof Atomic\TKeyedArray
         ) {
-            $replacement = $display_expr . ' ' . $comparison_operator . ' ' . '[]';
+            $replacement[] = $display_expr . ' ' . $comparison_operator . ' ' . '[]';
         } elseif ($atomic_type instanceof Atomic\TBool) {
-            $replacement = $display_expr . ' ' . $comparison_operator . ' ' . 'false';
+            $replacement[] = $display_expr . ' ' . $comparison_operator . ' ' . 'false';
         } else {
             // object, named objects could be replaced by false(or true if !empty)
             // null could be replace by true (or false if !empty)
-            if(!$atomic_type instanceof Atomic\TMixed) {
+            if (!$atomic_type instanceof Atomic\TMixed) {
                 var_dump(get_class($atomic_type));
                 var_dump($type->getId());
             }
         }
 
-        if($replacement !== null){
+        if ($replacement !== []) {
+            $replacement = array_unique($replacement); // deduplicate some conditions (null from type and from maybe nullable)
+
+            $replacement_string = implode(' ' . $combination_operator . ' ', $replacement);
+            if (count($replacement) > 1) {
+                $replacement_string = '(' . $replacement_string . ')';
+            }
+
             $startPos = $original_expr->getStartFilePos();
-            $endPos = $original_expr->getEndFilePos()+1;
-            $file_manipulation = new FileManipulation($startPos, $endPos, $replacement);
+            $endPos = $original_expr->getEndFilePos() + 1;
+            $file_manipulation = new FileManipulation($startPos, $endPos, $replacement_string);
             $event->setFileReplacements([$file_manipulation]);
         }
 
