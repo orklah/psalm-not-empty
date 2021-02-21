@@ -41,33 +41,40 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
         }
 
         if (!$type->isSingle()) {
-            // TODO: add functionnality with isSingleAndMaybeNullable and add || EXPR !== null
+            // TODO: add functionnality with isSingleAndMaybeNullable and add || EXPR === null
             return true;
         }
 
-        $startPos = $expr->getStartFilePos() + 1;
-        $endPos = $expr->getEndFilePos();
-
         $atomic_types = $type->getAtomicTypes();
         $atomic_type = array_shift($atomic_types);
-        $display_expr = (string)$expr->expr;
+        $display_expr = '$' .$expr->expr->name;
+
+        $replacement = null;
         if ($atomic_type instanceof Atomic\TInt) {
-            $file_manipulation = new FileManipulation($startPos, $endPos, $display_expr . " === 0");
-            $event->setFileReplacements([$file_manipulation]);
+            $replacement = $display_expr . " === 0";
         } elseif ($atomic_type instanceof Atomic\TFloat) {
-            $file_manipulation = new FileManipulation($startPos, $endPos, $display_expr . " === 0.0");
-            $event->setFileReplacements([$file_manipulation]);
+            $replacement = $display_expr . " === 0.0";
         } elseif ($atomic_type instanceof Atomic\TString) {
-            $file_manipulation = new FileManipulation($startPos, $endPos, "(" . $display_expr . " === '' || " . $display_expr . " === '0')");
-            $event->setFileReplacements([$file_manipulation]);
-        } elseif ($atomic_type instanceof Atomic\TArray) {
-            $file_manipulation = new FileManipulation($startPos, $endPos, $display_expr . " === []");
-            $event->setFileReplacements([$file_manipulation]);
+            $replacement = $display_expr . " === '' || " . $display_expr . " === '0'";
+        } elseif ($atomic_type instanceof Atomic\TArray
+            || $atomic_type instanceof Atomic\TList
+            || $atomic_type instanceof Atomic\TKeyedArray
+        ) {
+            $replacement = $display_expr . " === []";
         } elseif ($atomic_type instanceof Atomic\TBool) {
-            $file_manipulation = new FileManipulation($startPos, $endPos, $display_expr . " === false");
-            $event->setFileReplacements([$file_manipulation]);
+            $replacement = $display_expr . " === false";
         } else {
-            var_dump(get_class($atomic_type));
+            if(!$atomic_type instanceof Atomic\TMixed) {
+                var_dump(get_class($atomic_type));
+            }
+        }
+
+        if($replacement !== null){
+            $startPos = $expr->getStartFilePos();
+            $endPos = $expr->getEndFilePos();
+            //TODO: possible improvement: detect !empty and invert conditions to avoid convoluted syntax like if(!(EXPR === 0))
+            $file_manipulation = new FileManipulation($startPos, $endPos, '('.$replacement.')');
+            $event->setFileReplacements([$file_manipulation]);
         }
 
         return true;
