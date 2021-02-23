@@ -84,6 +84,15 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
             $replacement[] = $display_expr . ' ' . $comparison_operator . ' ' . '[]';
         } elseif ($atomic_type instanceof Atomic\TBool) {
             $replacement[] = $display_expr . ' ' . $comparison_operator . ' ' . 'false';
+        } elseif ($atomic_type instanceof Atomic\TObject || $atomic_type instanceof Atomic\TNamedObject) {
+            if($comparison_operator === '==='){
+                $replacement[] = 'false';
+            }
+            else{
+                $replacement[] = 'true';
+            }
+        } elseif ($atomic_type instanceof Atomic\TNull) {
+            $replacement[] = 'true';
         } else {
             // object, named objects could be replaced by false(or true if !empty)
             // null could be replace by true (or false if !empty)
@@ -91,6 +100,7 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
                 var_dump(get_class($atomic_type));
                 var_dump($type->getId());
             }
+            return true;
         }
 
         if ($replacement !== []) {
