@@ -63,6 +63,11 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
             $type->removeType('null');
         }
 
+        if($type->isSingle()){
+            //we removed null but the type is still not single
+            return true;
+        }
+
         $atomic_types = $type->getAtomicTypes();
         $atomic_type = array_shift($atomic_types);
         if ($atomic_type instanceof Atomic\TInt) {
