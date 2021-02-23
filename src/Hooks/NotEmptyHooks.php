@@ -63,7 +63,7 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
             $type->removeType('null');
         }
 
-        if($type->isSingle()){
+        if(!$type->isSingle()){
             //we removed null but the type is still not single
             return true;
         }
