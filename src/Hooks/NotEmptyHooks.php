@@ -85,18 +85,24 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
         } elseif ($atomic_type instanceof Atomic\TBool) {
             $replacement[] = $display_expr . ' ' . $comparison_operator . ' ' . 'false';
         } elseif ($atomic_type instanceof Atomic\TObject || $atomic_type instanceof Atomic\TNamedObject) {
-            if($comparison_operator === '==='){
-                $replacement[] = 'false';
+            if($comparison_operator === '===') {
+                if ($combination_operator === '&&') { //don't add || false, it would be stupid
+                    $replacement[] = 'false';
+                }
             }
             else{
-                $replacement[] = 'true';
+                if ($combination_operator === '||') { //don't add && true, it would be stupid
+                    $replacement[] = 'true';
+                }
             }
         } elseif ($atomic_type instanceof Atomic\TNull) {
-            $replacement[] = 'true';
+            if ($combination_operator === '||') { //don't add && true, it would be stupid
+                $replacement[] = 'true';
+            }
         } else {
             // object, named objects could be replaced by false(or true if !empty)
             // null could be replace by true (or false if !empty)
-            if (!$atomic_type instanceof Atomic\TMixed) {
+            if (!$atomic_type instanceof Atomic\TMixed && !$atomic_type instanceof Atomic\TArrayKey) {
                 var_dump(get_class($atomic_type));
                 var_dump($type->getId());
             }
@@ -105,6 +111,10 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
 
         if ($replacement !== []) {
             $replacement = array_unique($replacement); // deduplicate some conditions (null from type and from maybe nullable)
+            if (count($replacement) > 2) {
+                //at one point, you have to ask if empty is not the best thing to use!
+                return true;
+            }
 
             $replacement_string = implode(' ' . $combination_operator . ' ', $replacement);
             if (count($replacement) > 1) {
