@@ -2,8 +2,6 @@
     "name": "orklah/psalm-not-empty",
     "description": "Automatically change empty() into a more explicit expression",
     "type": "psalm-plugin",
-    "minimum-stability": "dev",
-    "prefer-stable": true,
     "license": "MIT",
     "authors": [
         {
@@ -17,7 +15,7 @@
     },
     "require": {
         "php": "^7.3",
-        "vimeo/psalm": "master"
+        "vimeo/psalm": "^4.6.1"
     },
     "autoload": {
         "psr-4": {
