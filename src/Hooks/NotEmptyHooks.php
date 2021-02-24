@@ -100,12 +100,6 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
                 $replacement[] = 'true';
             }
         } else {
-            // object, named objects could be replaced by false(or true if !empty)
-            // null could be replace by true (or false if !empty)
-            if (!$atomic_type instanceof Atomic\TMixed && !$atomic_type instanceof Atomic\TArrayKey) {
-                var_dump(get_class($atomic_type));
-                var_dump($type->getId());
-            }
             return true;
         }
 
