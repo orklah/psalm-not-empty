@@ -15,7 +15,7 @@
     },
     "require": {
         "php": "^7.3|^8.0",
-        "vimeo/psalm": "^4.6.1"
+        "vimeo/psalm": "^5"
     },
     "autoload": {
         "psr-4": {
@@ -25,6 +25,6 @@
     "require-dev": {
         "nikic/php-parser": "^4.0",
         "phpunit/phpunit": "^9.5",
-        "psalm/plugin-phpunit": "^0.15.0"
+        "psalm/plugin-phpunit": "^0.18.0"
     }
 }
