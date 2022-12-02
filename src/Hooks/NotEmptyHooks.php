@@ -18,7 +18,7 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
     public static function afterExpressionAnalysis(AfterExpressionAnalysisEvent $event): ?bool
     {
         if (!$event->getCodebase()->alter_code) {
-            return true;
+            return null;
         }
 
         $original_expr = $event->getExpr();
@@ -34,25 +34,29 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
         } elseif ($original_expr instanceof Empty_) {
             if ($event->getContext()->inside_negation) {
                 //we're inside a negation. If we start messing with replacements now, we won't be able to handle the negation then
-                return true;
+                return null;
             }
             $expr = $original_expr;
         } else {
-            return true;
+            return null;
         }
 
         if (!$expr->expr instanceof Variable) {
-            return true;
+            return null;
         }
 
         $type = $node_provider->getType($expr->expr);
         if ($type === null) {
-            return true;
+            return null;
         }
 
         if ($type->from_docblock) {
             //TODO: maybe add an issue in non alter mode
-            return true;
+            return null;
+        }
+
+        if (!is_string($expr->expr->name)) {
+            return null;
         }
 
         $display_expr = '$' . $expr->expr->name;
@@ -60,12 +64,13 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
         $replacement = [];
         if ($type->isSingleAndMaybeNullable() && $type->isNullable()) {
             $replacement[] = $display_expr . ' ' . $comparison_operator . ' ' . 'null';
+            $type = $type->getBuilder();
             $type->removeType('null');
         }
 
         if(!$type->isSingle()){
             //we removed null but the type is still not single
-            return true;
+            return null;
         }
 
         $atomic_types = $type->getAtomicTypes();
@@ -100,14 +105,14 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
                 $replacement[] = 'true';
             }
         } else {
-            return true;
+            return null;
         }
 
         if ($replacement !== []) {
             $replacement = array_unique($replacement); // deduplicate some conditions (null from type and from maybe nullable)
             if (count($replacement) > 2) {
                 //at one point, you have to ask if empty is not the best thing to use!
-                return true;
+                return null;
             }
 
             $replacement_string = implode(' ' . $combination_operator . ' ', $replacement);
@@ -121,6 +126,6 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
             $event->setFileReplacements([$file_manipulation]);
         }
 
-        return true;
+        return null;
     }
 }
