@@ -5,6 +5,7 @@ namespace Orklah\NotEmpty\Hooks;
 use PhpParser\Node\Expr\BooleanNot;
 use PhpParser\Node\Expr\Empty_;
 use PhpParser\Node\Expr\Variable;
+use Psalm\Config;
 use Psalm\FileManipulation;
 use Psalm\Plugin\EventHandler\AfterExpressionAnalysisInterface;
 use Psalm\Plugin\EventHandler\Event\AfterExpressionAnalysisEvent;
@@ -51,8 +52,24 @@ class NotEmptyHooks implements AfterExpressionAnalysisInterface
         }
 
         if ($type->from_docblock) {
-            //TODO: maybe add an issue in non alter mode
-            return null;
+            $allow_docblock = false;
+            $config = Config::getInstance();
+            foreach ($config->getPluginClasses() as $plugin) {
+                if ($plugin['class'] !== 'Orklah\NotEmpty\Plugin') {
+                    continue;
+                }
+
+                if (isset($plugin['config']->fromDocblock['value']) && (string) $plugin['config']->fromDocblock['value'] === 'true') {
+                    $allow_docblock = true;
+                }
+
+                break;
+            }
+
+            if ($allow_docblock === false) {
+                //TODO: maybe add an issue in non alter mode
+                return null;
+            }
         }
 
         if (!is_string($expr->expr->name)) {
