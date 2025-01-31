@@ -15,7 +15,7 @@
     },
     "require": {
         "php": "^7.3|^8.0",
-        "vimeo/psalm": "^5"
+        "vimeo/psalm": "^6|^5"
     },
     "autoload": {
         "psr-4": {
